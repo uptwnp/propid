@@ -54,19 +54,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
     }
   };
 
-  const copyLocation = async () => {
-    const lat = parseFloat(property.Lat);
-    const lng = parseFloat(property.Long);
-    const coordinates = `${lat},${lng}`;
-    
-    try {
-      await navigator.clipboard.writeText(coordinates);
-      // You could add a toast notification here if needed
-    } catch (err) {
-      console.error('Failed to copy location:', err);
-    }
-  };
-
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Residential':
@@ -300,7 +287,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                   <h3 className="font-semibold text-gray-900">Location</h3>
                 </div>
                 <button
-                  onClick={copyLocation}
+                  onClick={copyCoordinates}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
                 >
                   <Copy className="w-4 h-4" />
