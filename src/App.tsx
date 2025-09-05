@@ -1,21 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropertyMap from './components/PropertyMap';
 import SearchFilters from './components/SearchFilters';
 import PropertyDetails from './components/PropertyDetails';
-import { Property, FilterOptions } from './types/Property';
+import StateIndicator from './components/StateIndicator';
+import PWAUpdatePrompt from './components/PWAUpdatePrompt';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import { Property } from './types/Property';
 import { useMapData } from './hooks/useMapData';
 import { MapBounds } from './services/propertyApi';
+import { useAppState } from './hooks/usePersistentState';
 
 function App() {
-  const [filters, setFilters] = useState<FilterOptions>({
-    search: '',
-    propertyCategory: '',
-    colonyName: '',
-    responseStatus: '',
-    hasContact: null
-  });
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const {
+    filters,
+    setFilters,
+    isFilterOpen,
+    setIsFilterOpen,
+    selectedProperty,
+    setSelectedProperty,
+    mapView,
+    setMapView,
+    currentZoom,
+    setCurrentZoom,
+    mapCenter,
+    setMapCenter,
+    userLocation,
+    setUserLocation,
+    mapBounds,
+    setMapBounds,
+    searchResults,
+    setSearchResults,
+    clearAllState
+  } = useAppState();
+
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [searchTriggered, setSearchTriggered] = useState(false);
 
   const {
     properties,
@@ -24,9 +44,21 @@ function App() {
     updatePropertyData,
     fetchDataForBounds,
     clearError,
-  } = useMapData({ filters, minZoomLevel: 18 }); // Changed from 19 to 18
+    clearProperties,
+  } = useMapData({ 
+    filters, 
+    minZoomLevel: 18,
+    persistentResults: searchResults,
+    onResultsUpdate: setSearchResults,
+    searchTriggered
+  });
 
   const handleBoundsChange = async (bounds: MapBounds, zoom: number) => {
+    setIsSaving(true);
+    setCurrentZoom(zoom);
+    setMapBounds(bounds);
+    setLastSaved(new Date());
+    setIsSaving(false);
     await fetchDataForBounds(bounds, zoom);
   };
 
@@ -37,6 +69,47 @@ function App() {
       console.error('Failed to update property:', error);
       // You could show a toast notification here
     }
+  };
+
+  const handleSearchTrigger = () => {
+    setSearchTriggered(true);
+    // Reset the trigger after a short delay to allow for re-triggering
+    setTimeout(() => setSearchTriggered(false), 100);
+  };
+
+  const handleClearAll = () => {
+    // Clear all persistent state
+    clearAllState();
+    // Clear fetched properties
+    clearProperties();
+    // Reset local state
+    setLastSaved(null);
+    setIsSaving(false);
+    setSearchTriggered(false);
+  };
+
+  const handlePWAUpdate = () => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then((registration) => {
+        if (registration && registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          window.location.reload();
+        }
+      });
+    }
+  };
+
+  const handlePWADismiss = () => {
+    // Dismiss the update prompt
+    console.log('PWA update dismissed');
+  };
+
+  const handlePWAInstall = () => {
+    console.log('PWA install initiated');
+  };
+
+  const handlePWAInstallDismiss = () => {
+    console.log('PWA install dismissed');
   };
 
   // Close filter panel on window resize for better mobile experience
@@ -51,11 +124,14 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+
   return (
     <div className="h-screen flex bg-gray-100">
       <SearchFilters
         filters={filters}
         onFiltersChange={setFilters}
+        onSearchTrigger={handleSearchTrigger}
+        onClearAll={handleClearAll}
         properties={properties}
         isOpen={isFilterOpen}
         onToggle={() => setIsFilterOpen(!isFilterOpen)}
@@ -72,6 +148,13 @@ function App() {
           error={error}
           onBoundsChange={handleBoundsChange}
           onClearError={clearError}
+          mapView={mapView}
+          onMapViewChange={setMapView}
+          currentZoom={currentZoom}
+          mapCenter={mapCenter}
+          onMapCenterChange={setMapCenter}
+          userLocation={userLocation}
+          onUserLocationChange={setUserLocation}
         />
       </div>
 
@@ -82,6 +165,23 @@ function App() {
           onUpdate={handlePropertyUpdate}
         />
       )}
+
+      {/* State persistence indicator - only shows errors */}
+      <StateIndicator 
+        error={error}
+      />
+
+      {/* PWA Update Prompt */}
+      <PWAUpdatePrompt
+        onUpdate={handlePWAUpdate}
+        onDismiss={handlePWADismiss}
+      />
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt
+        onInstall={handlePWAInstall}
+        onDismiss={handlePWAInstallDismiss}
+      />
     </div>
   );
 }

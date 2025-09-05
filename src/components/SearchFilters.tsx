@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { Search, Filter, X, MapPin, Building, Phone, MessageSquare, Plus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import React from 'react';
+import { Search, Filter, X, MapPin, Building, Phone, MessageSquare, Plus, Download } from 'lucide-react';
 import { FilterOptions } from '../types/Property';
 
 interface SearchFiltersProps {
   filters: FilterOptions;
   onFiltersChange: (filters: FilterOptions) => void;
+  onSearchTrigger: () => void;
+  onClearAll: () => void;
   properties: any[];
   isOpen: boolean;
   onToggle: () => void;
@@ -13,11 +15,12 @@ interface SearchFiltersProps {
 const SearchFilters: React.FC<SearchFiltersProps> = ({
   filters,
   onFiltersChange,
+  onSearchTrigger,
+  onClearAll,
   properties,
   isOpen,
   onToggle
 }) => {
-  const uniqueCategories = [...new Set(properties.map(p => p.PropertyCategory))];
   const uniqueColonies = [...new Set(properties.map(p => p.ColonyName))];
 
     const handleAddProperty = () => {
@@ -27,19 +30,21 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
   const handleExtractData = () => {
     window.open('https://prop.digiheadway.in/tool/extractor/', '_blank');
   };
-  const clearFilters = () => {
-    onFiltersChange({
-      search: '',
-      propertyCategory: '',
-      colonyName: '',
-      responseStatus: '',
-      hasContact: null
-    });
-  };
 
-  const activeFilterCount = Object.values(filters).filter(value => 
-    value !== '' && value !== null
-  ).length;
+  const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
+    // Handle different field types
+    if (key === 'hasContact') {
+      return value !== null;
+    }
+    if (key === 'minSize' || key === 'maxSize') {
+      return value > 0;
+    }
+    if (key === 'sizeRange') {
+      return value !== '';
+    }
+    // For all other string fields
+    return value !== '';
+  }).length;
 
   return (
     <>
@@ -81,14 +86,12 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
               )}
             </div>
             <div className="flex items-center gap-2">
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Clear All
-                </button>
-              )}
+              <button
+                onClick={onClearAll}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Clear All
+              </button>
               <button
                 onClick={onToggle}
                 className="p-1 hover:bg-gray-100 rounded"
@@ -100,22 +103,104 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
 
           {/* Search */}
           <div className="space-y-6">
+            <div className="space-y-3">
+              {/* First Line: Search Input with Search Button */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      onSearchTrigger();
+                    }
+                  }}
+                  placeholder="Search by property name or ID..."
+                  className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                  onClick={onSearchTrigger}
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Second Line: Field Selection Dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 font-medium">Search in:</span>
+                <select
+                  value={filters.searchWhere}
+                  onChange={(e) => onFiltersChange({ ...filters, searchWhere: e.target.value })}
+                  className="text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[120px]"
+                >
+                  <option value="">Global</option>
+                  <option value="Address1">Address</option>
+                  <option value="ColonyName">Colony</option>
+                  <option value="MobileNo">Mobile</option>
+                  <option value="OwnerName">Owner</option>
+                  <option value="id">ID</option>
+                  <option value="remark">Remark</option>
+                  <option value="response">Response</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Size Range Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Search className="w-4 h-4 inline mr-2" />
-                Global Search
+                <Building className="w-4 h-4 inline mr-2" />
+                Plot Size Range
               </label>
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-                placeholder="Search by owner, address, or PID..."
+              <select
+                value={filters.sizeRange}
+                onChange={(e) => onFiltersChange({ ...filters, sizeRange: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Search across all properties globally
-              </p>
+              >
+                <option value="">All Sizes</option>
+                <option value="below_80">Below 80 sq yard</option>
+                <option value="80_to_110">80 - 110 sq yard</option>
+                <option value="110_to_140">110 - 140 sq yard</option>
+                <option value="140_to_180">140 - 180 sq yard</option>
+                <option value="180_to_250">180 - 250 sq yard</option>
+                <option value="250_to_300">250 - 300 sq yard</option>
+                <option value="300_to_450">300 - 450 sq yard</option>
+                <option value="450_to_600">450 - 600 sq yard</option>
+                <option value="600_to_1000">600 - 1000 sq yard</option>
+                <option value="1000_to_1500">1000 - 1500 sq yard</option>
+                <option value="1500_plus">1500+ sq yard</option>
+                <option value="custom">Custom Range</option>
+              </select>
             </div>
+
+            {/* Custom Size Range - Only show when Custom Range is selected */}
+            {filters.sizeRange === 'custom' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Custom Size Range (sq yard)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={filters.minSize || ''}
+                    onChange={(e) => onFiltersChange({ ...filters, minSize: parseFloat(e.target.value) || 0 })}
+                    placeholder="Min size"
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <input
+                    type="number"
+                    value={filters.maxSize || ''}
+                    onChange={(e) => onFiltersChange({ ...filters, maxSize: parseFloat(e.target.value) || 0 })}
+                    placeholder="Max size"
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Set custom size range in square feet
+                </p>
+              </div>
+            )}
 
             {/* Property Category */}
             <div>

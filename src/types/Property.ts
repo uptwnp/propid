@@ -57,6 +57,10 @@ export interface FilterOptions {
   colonyName: string;
   responseStatus: string;
   hasContact: boolean | null;
+  searchWhere: string;
+  sizeRange: string;
+  minSize: number;
+  maxSize: number;
 }
 
 export type MapView = 'street' | 'satellite';

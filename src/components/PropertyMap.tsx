@@ -17,10 +17,25 @@ interface PropertyMapProps {
   error?: string | null;
   onBoundsChange?: (bounds: MapBounds, zoom: number) => void;
   onClearError?: () => void;
+  mapView: MapView;
+  onMapViewChange: (view: MapView) => void;
+  currentZoom: number;
+  mapCenter: [number, number];
+  onMapCenterChange: (center: [number, number]) => void;
+  userLocation: [number, number] | null;
+  onUserLocationChange: (location: [number, number] | null) => void;
 }
 
-const MapController: React.FC<{ view: MapView; focusLocation?: [number, number] | null }> = ({ view, focusLocation }) => {
+const MapController: React.FC<{ 
+  view: MapView; 
+  focusLocation?: [number, number] | null;
+  mapCenter: [number, number];
+  currentZoom: number;
+  userLocation: [number, number] | null;
+  onMapCenterChange: (center: [number, number]) => void;
+}> = ({ view, focusLocation, mapCenter, currentZoom, userLocation, onMapCenterChange }) => {
   const map = useMap();
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   useEffect(() => {
     const streetLayer = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -40,6 +55,21 @@ const MapController: React.FC<{ view: MapView; focusLocation?: [number, number] 
     }).addTo(map);
   }, [view, map]);
 
+  // Restore map state on initialization
+  useEffect(() => {
+    if (!hasInitialized) {
+      const center = userLocation || mapCenter;
+      const zoom = userLocation ? 17 : currentZoom;
+      
+      map.setView(center, zoom, {
+        animate: false,
+        duration: 0
+      });
+      
+      setHasInitialized(true);
+    }
+  }, [map, mapCenter, currentZoom, userLocation, hasInitialized]);
+
   // Handle location focusing
   useEffect(() => {
     if (focusLocation) {
@@ -50,6 +80,19 @@ const MapController: React.FC<{ view: MapView; focusLocation?: [number, number] 
       });
     }
   }, [focusLocation, map]);
+
+  // Track map center changes
+  useEffect(() => {
+    const handleMoveEnd = () => {
+      const center = map.getCenter();
+      onMapCenterChange([center.lat, center.lng]);
+    };
+
+    map.on('moveend', handleMoveEnd);
+    return () => {
+      map.off('moveend', handleMoveEnd);
+    };
+  }, [map, onMapCenterChange]);
   
   return null;
 };
@@ -94,19 +137,20 @@ const PropertyMap: React.FC<PropertyMapProps> = ({
   loading = false,
   error = null,
   onBoundsChange,
-  onClearError
+  onClearError,
+  mapView,
+  onMapViewChange,
+  currentZoom,
+  mapCenter,
+  onMapCenterChange,
+  userLocation,
+  onUserLocationChange
 }) => {
-  const [mapView, setMapView] = useState<MapView>(() => {
-    return (localStorage.getItem('mapView') as MapView) || 'street';
-  });
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [currentZoom, setCurrentZoom] = useState(13);
   const [focusLocation, setFocusLocation] = useState<[number, number] | null>(null);
 
   const handleMapViewChange = (view: MapView) => {
-    setMapView(view);
-    localStorage.setItem('mapView', view);
+    onMapViewChange(view);
   };
 
   const getCurrentLocation = () => {
@@ -120,7 +164,7 @@ const PropertyMap: React.FC<PropertyMapProps> = ({
       (position) => {
         const { latitude, longitude } = position.coords;
         const location: [number, number] = [latitude, longitude];
-        setUserLocation(location);
+        onUserLocationChange(location);
         setFocusLocation(location);
         setIsLocating(false);
       },
@@ -138,7 +182,6 @@ const PropertyMap: React.FC<PropertyMapProps> = ({
   };
 
   const handleBoundsChange = useCallback((bounds: MapBounds, zoom: number) => {
-    setCurrentZoom(zoom);
     if (onBoundsChange) {
       onBoundsChange(bounds, zoom);
     }
@@ -364,14 +407,13 @@ const PropertyMap: React.FC<PropertyMapProps> = ({
     });
   }, [properties, selectedProperty?.id, createPinIcon, onPropertySelect]);
 
-  // Default center coordinates (Panipat area)
-  const defaultCenter: [number, number] = [29.3810900, 76.9869630];
+  // Use persisted map center or calculate from properties
   const centerLat = properties.length > 0 
     ? properties.reduce((sum, p) => sum + parseFloat(p.Lat), 0) / properties.length
-    : defaultCenter[0];
+    : mapCenter[0];
   const centerLng = properties.length > 0
     ? properties.reduce((sum, p) => sum + parseFloat(p.Long), 0) / properties.length
-    : defaultCenter[1];
+    : mapCenter[1];
 
   return (
     <div className="relative h-full">
@@ -458,12 +500,19 @@ const PropertyMap: React.FC<PropertyMapProps> = ({
 
       <MapContainer
         center={userLocation || [centerLat, centerLng]}
-        zoom={userLocation ? 17 : 13}
+        zoom={userLocation ? 17 : currentZoom}
         className="h-full w-full"
         zoomControl={false}
         maxZoom={20}
       >
-        <MapController view={mapView} focusLocation={focusLocation} />
+        <MapController 
+          view={mapView} 
+          focusLocation={focusLocation}
+          mapCenter={mapCenter}
+          currentZoom={currentZoom}
+          userLocation={userLocation}
+          onMapCenterChange={onMapCenterChange}
+        />
         <MapEventHandler onBoundsChange={handleBoundsChange} />
         
         {/* User Location Marker */}
