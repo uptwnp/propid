@@ -8,9 +8,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      manifestFilename: 'manifest.json',
       manifest: {
-        name: 'Property Map Visualizer',
+        name: 'Property Data',
         short_name: 'PropMap',
         description: 'Interactive property map with search and filtering capabilities',
         theme_color: '#3b82f6',
@@ -21,11 +22,33 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml'
-          }
-        ]
+            src: '/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icon-192-maskable.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icon-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+        ],
+        categories: ['maps', 'navigation', 'utilities'],
+        lang: 'en',
+        dir: 'ltr'
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],

@@ -4,7 +4,6 @@ import SearchFilters from './components/SearchFilters';
 import PropertyDetails from './components/PropertyDetails';
 import StateIndicator from './components/StateIndicator';
 import PWAUpdatePrompt from './components/PWAUpdatePrompt';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { Property } from './types/Property';
 import { useMapData } from './hooks/useMapData';
 import { MapBounds } from './services/propertyApi';
@@ -104,13 +103,6 @@ function App() {
     console.log('PWA update dismissed');
   };
 
-  const handlePWAInstall = () => {
-    console.log('PWA install initiated');
-  };
-
-  const handlePWAInstallDismiss = () => {
-    console.log('PWA install dismissed');
-  };
 
   // Close filter panel on window resize for better mobile experience
   useEffect(() => {
@@ -175,12 +167,6 @@ function App() {
       <PWAUpdatePrompt
         onUpdate={handlePWAUpdate}
         onDismiss={handlePWADismiss}
-      />
-
-      {/* PWA Install Prompt */}
-      <PWAInstallPrompt
-        onInstall={handlePWAInstall}
-        onDismiss={handlePWAInstallDismiss}
       />
     </div>
   );
