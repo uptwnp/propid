@@ -41,6 +41,32 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
     window.open(url, '_blank');
   };
 
+  const copyCoordinates = async () => {
+    const lat = parseFloat(property.Lat);
+    const lng = parseFloat(property.Long);
+    const coordinates = `${lat},${lng}`;
+    
+    try {
+      await navigator.clipboard.writeText(coordinates);
+      // You could add a toast notification here if needed
+    } catch (err) {
+      console.error('Failed to copy coordinates:', err);
+    }
+  };
+
+  const copyLocation = async () => {
+    const lat = parseFloat(property.Lat);
+    const lng = parseFloat(property.Long);
+    const coordinates = `${lat},${lng}`;
+    
+    try {
+      await navigator.clipboard.writeText(coordinates);
+      // You could add a toast notification here if needed
+    } catch (err) {
+      console.error('Failed to copy location:', err);
+    }
+  };
+
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Residential':
@@ -110,13 +136,22 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                 <h3 className="font-semibold text-gray-900">{formatPlotSize(property.PlotSize, property.Unit)}</h3>
               </div>
               <p className="text-gray-900 font-medium leading-relaxed">{property.Address1}</p>
-              <button
-                onClick={openInMaps}
-                className="mt-2 text-purple-600 hover:text-purple-800 text-sm font-medium flex items-center gap-1"
-              >
-                <Navigation className="w-4 h-4" />
-                Open in Maps
-              </button>
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  onClick={openInMaps}
+                  className="text-purple-600 hover:text-purple-800 text-sm font-medium flex items-center gap-1"
+                >
+                  <Navigation className="w-4 h-4" />
+                  Open in Maps
+                </button>
+                <button
+                  onClick={copyCoordinates}
+                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  title="Copy coordinates"
+                >
+                  <Copy className="w-4 h-4 text-gray-500 hover:text-gray-700" />
+                </button>
+              </div>
             </div>
 
             {/* Phone Section */}
@@ -259,9 +294,18 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 
             {/* Location Section */}
             <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin className="w-5 h-5 text-gray-600" />
-                <h3 className="font-semibold text-gray-900">Location</h3>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-gray-600" />
+                  <h3 className="font-semibold text-gray-900">Location</h3>
+                </div>
+                <button
+                  onClick={copyLocation}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy Location
+                </button>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
